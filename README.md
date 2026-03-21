@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 🎵 YTDrop — YouTube to MP3 / MP4 Converter
 A self-hosted, no-login YouTube converter powered by yt-dlp and Node.js.
 ---
@@ -76,3 +77,6 @@ YouTube frequently changes its format — keep yt-dlp fresh:
 ```bash
 yt-dlp -U
 ```
+=======
+# ytdrop
+>>>>>>> 15dfad162b65f4df22f2cc33afb83fa50b126034
