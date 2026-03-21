@@ -4,8 +4,7 @@
 
 # 🎵 YTDrop — YouTube to MP3 / MP4 Converter
 
-**Free · No Signup · Runs Locally · Powered by yt-dlp**<img width="1227" height="890" alt="Screenshot 2026-03-21 233831" src="https://github.com/user-attachments/assets/88c8811c-4c17-4bfd-b77c-bb9dc71579a3" />
-
+**Free · No Signup · Runs Locally · Powered by yt-dlp**
 
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
 [![yt-dlp](https://img.shields.io/badge/yt--dlp-Latest-e8ff47?style=flat-square&logo=youtube&logoColor=black)](https://github.com/yt-dlp/yt-dlp)
@@ -18,6 +17,12 @@
 <img src="https://img.shields.io/badge/●%20Best%20Audio%20Quality-e8ff47?style=flat-square&labelColor=111" />
 <img src="https://img.shields.io/badge/●%20Up%20to%201080p%20Video-ff5c5c?style=flat-square&labelColor=111" />
 <img src="https://img.shields.io/badge/●%20Instant%20Download-5c8fff?style=flat-square&labelColor=111" />
+
+<br/><br/>
+
+### 🚀 [Live Demo → ytdrop-production.up.railway.app](https://ytdrop-production.up.railway.app)
+
+[![Live Demo](https://img.shields.io/badge/🌐%20Live%20Demo-Visit%20YTDrop-e8ff47?style=for-the-badge&labelColor=111111)](https://ytdrop-production.up.railway.app)
 
 </div>
 
