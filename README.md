@@ -121,7 +121,7 @@ npm start
 Then open your browser and go to:
 
 ```
-http://localhost:3000
+https://ytdrop-production.up.railway.app/
 ```
 
 > 💡 For auto-restart on file changes during development:
