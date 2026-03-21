@@ -4,7 +4,8 @@
 
 # 🎵 YTDrop — YouTube to MP3 / MP4 Converter
 
-**Free · No Signup · Runs Locally · Powered by yt-dlp**
+**Free · No Signup · Runs Locally · Powered by yt-dlp**<img width="1227" height="890" alt="Screenshot 2026-03-21 233831" src="https://github.com/user-attachments/assets/88c8811c-4c17-4bfd-b77c-bb9dc71579a3" />
+
 
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
 [![yt-dlp](https://img.shields.io/badge/yt--dlp-Latest-e8ff47?style=flat-square&logo=youtube&logoColor=black)](https://github.com/yt-dlp/yt-dlp)
