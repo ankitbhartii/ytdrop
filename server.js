@@ -294,3 +294,6 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`🔧 yt-dlp: ${getYtDlpBin()}`);
 });
 
+app.get("/", (req, res) => {
+  res.send("YTDrop is live 🚀");
+});
