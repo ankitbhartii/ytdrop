@@ -1,224 +1,103 @@
 const express = require("express");
-const { spawn } = require("child_process");
 const path = require("path");
 const fs = require("fs");
-const { v4: uuidv4 } = require("uuid");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
+const { v4: uuidv4 } = require("uuid");
+const ytdlp = require("yt-dlp-exec");
 
 const app = express();
 
+// IMPORTANT for Railway (fixes proxy + rate limit issue)
 app.set("trust proxy", 1);
+
 const PORT = process.env.PORT || 3000;
 const DOWNLOADS_DIR = path.join(__dirname, "downloads");
 
-// Ensure downloads dir exists
+// Ensure downloads folder exists
 if (!fs.existsSync(DOWNLOADS_DIR)) {
   fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
 }
 
-// Middleware
+// ================= MIDDLEWARE =================
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 const limiter = rateLimit({
-  windowMs: 1 * 60 * 1000,
-  max: 200,
+  windowMs: 60 * 1000,
+  max: 100,
 });
-app.use("/api/", limiter);
+app.use(limiter);
 
-// In-memory jobs
-const jobs = {};
-
-// Extract YouTube ID
-function extractVideoId(url) {
-  const patterns = [
-    /[?&]v=([a-zA-Z0-9_-]{11})/,
-    /youtu\.be\/([a-zA-Z0-9_-]{11})/,
-    /embed\/([a-zA-Z0-9_-]{11})/,
-    /shorts\/([a-zA-Z0-9_-]{11})/,
-  ];
-  for (const re of patterns) {
-    const m = url.match(re);
-    if (m) return m[1];
-  }
-  return null;
-}
-
-// Find output file
-function findOutputFile(jobId) {
+// ================= DOWNLOAD ROUTE =================
+app.post("/api/download", async (req, res) => {
   try {
-    const files = fs.readdirSync(DOWNLOADS_DIR);
-    const match = files.find((f) => f.startsWith(jobId));
-    return match ? path.join(DOWNLOADS_DIR, match) : null;
-  } catch {
-    return null;
-  }
-}
+    const { url, format } = req.body;
 
-// Cleanup old files
-setInterval(() => {
-  try {
-    const now = Date.now();
-    fs.readdirSync(DOWNLOADS_DIR).forEach((file) => {
-      const fp = path.join(DOWNLOADS_DIR, file);
-      if (now - fs.statSync(fp).mtimeMs > 60 * 60 * 1000) {
-        fs.unlinkSync(fp);
-      }
-    });
-  } catch {}
-}, 30 * 60 * 1000);
-
-// ------------------ INFO API ------------------
-app.get("/api/info", (req, res) => {
-  const { url } = req.query;
-  if (!url) return res.status(400).json({ error: "Missing url" });
-
-  const videoId = extractVideoId(url);
-  if (!videoId) return res.status(400).json({ error: "Invalid URL" });
-
-  const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
-
-  const proc = spawn("python3", [
-    "-m",
-    "yt_dlp",
-    "--dump-json",
-    "--no-playlist",
-    "--no-warnings",
-    ytUrl,
-  ]);
-
-  let stdout = "";
-  let stderr = "";
-
-  proc.stdout.on("data", (d) => (stdout += d.toString()));
-  proc.stderr.on("data", (d) => (stderr += d.toString()));
-
-  proc.on("close", (code) => {
-    if (code !== 0) {
-      return res.status(500).json({ error: "Failed to fetch video info" });
+    if (!url) {
+      return res.status(400).json({ error: "URL required" });
     }
-    try {
-      const info = JSON.parse(stdout);
-      res.json({
-        title: info.title,
-        thumbnail: info.thumbnail,
-        duration: info.duration_string,
-        channel: info.uploader,
+
+    const id = uuidv4();
+    const output = path.join(DOWNLOADS_DIR, `${id}.%(ext)s`);
+
+    // Download using yt-dlp-exec (NO python needed)
+    if (format === "mp3") {
+      await ytdlp(url, {
+        extractAudio: true,
+        audioFormat: "mp3",
+        output: output,
       });
-    } catch {
-      res.status(500).json({ error: "Parsing error" });
-    }
-  });
-
-  proc.on("error", (e) => {
-    res.status(500).json({ error: e.message });
-  });
-});
-
-// ------------------ CONVERT API ------------------
-app.post("/api/convert", (req, res) => {
-  const { url, format, quality } = req.body;
-  if (!url || !format) return res.status(400).json({ error: "Missing params" });
-
-  const videoId = extractVideoId(url);
-  if (!videoId) return res.status(400).json({ error: "Invalid URL" });
-
-  const jobId = uuidv4();
-  const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
-  const output = path.join(DOWNLOADS_DIR, `${jobId}.%(ext)s`);
-
-  jobs[jobId] = { status: "processing", progress: 0 };
-
-  res.json({ jobId });
-
-  let args;
-
-  if (format === "mp3") {
-    args = [
-      "-x",
-      "--audio-format",
-      "mp3",
-      "--audio-quality",
-      "0",
-      "-o",
-      output,
-      ytUrl,
-    ];
-  } else {
-    const height = quality === "1080p" ? 1080 : 720;
-    args = [
-      "-f",
-      `bestvideo[height<=${height}]+bestaudio/best`,
-      "--merge-output-format",
-      "mp4",
-      "-o",
-      output,
-      ytUrl,
-    ];
-  }
-
-  const proc = spawn("python3", ["-m", "yt_dlp", ...args]);
-
-  proc.stdout.on("data", (data) => {
-    const line = data.toString();
-    const match = line.match(/(\d+\.?\d*)%/);
-    if (match) {
-      jobs[jobId].progress = Math.round(parseFloat(match[1]));
-    }
-  });
-
-  proc.on("close", (code) => {
-    if (code !== 0) {
-      jobs[jobId].status = "error";
-      return;
-    }
-
-    const file = findOutputFile(jobId);
-    if (file) {
-      jobs[jobId].status = "done";
-      jobs[jobId].file = path.basename(file);
     } else {
-      jobs[jobId].status = "error";
+      await ytdlp(url, {
+        format: "best",
+        output: output,
+      });
     }
-  });
 
-  proc.on("error", (e) => {
-    jobs[jobId].status = "error";
-  });
+    // Find downloaded file
+    const file = fs
+      .readdirSync(DOWNLOADS_DIR)
+      .find((f) => f.startsWith(id));
+
+    if (!file) {
+      return res.status(500).json({ error: "File not found after download" });
+    }
+
+    res.json({ file });
+  } catch (err) {
+    console.error("Download error:", err);
+    res.status(500).json({ error: "Download failed" });
+  }
 });
 
-// ------------------ STATUS ------------------
-app.get("/api/status/:jobId", (req, res) => {
-  const job = jobs[req.params.jobId];
-  if (!job) return res.status(404).json({ error: "Not found" });
-  res.json(job);
-});
-
-// ------------------ DOWNLOAD ------------------
+// ================= SERVE FILE =================
 app.get("/api/download/:file", (req, res) => {
-  const file = path.join(DOWNLOADS_DIR, req.params.file);
+  const filePath = path.join(DOWNLOADS_DIR, req.params.file);
 
-  if (!fs.existsSync(file)) {
-    return res.status(404).json({ error: "File not found" });
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send("File not found");
   }
 
-  res.download(file, () => {
+  res.download(filePath, () => {
+    // Delete file after sending
     setTimeout(() => {
       try {
-        fs.unlinkSync(file);
-      } catch {}
-    }, 3000);
+        fs.unlinkSync(filePath);
+      } catch (err) {
+        console.error("Cleanup error:", err);
+      }
+    }, 5000);
   });
 });
 
-// Root route
+// ================= ROOT =================
 app.get("/", (req, res) => {
   res.send("YTDrop is live 🚀");
 });
 
-// Start server
+// ================= START SERVER =================
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
