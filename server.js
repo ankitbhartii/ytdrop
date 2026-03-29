@@ -322,8 +322,6 @@ function formatDuration(seconds) {
 }
 
 // ── Start ─────────────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`\n🎵 YTDrop running at http://localhost:${PORT}`);
-  console.log(`📁 Downloads: ${DOWNLOADS_DIR}`);
-  console.log(`🔧 yt-dlp binary: ${YT_DLP_BIN}\n`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 YTDrop server running on port ${PORT}`);
 });
