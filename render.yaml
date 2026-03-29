@@ -2,8 +2,10 @@ services:
   - type: web
     name: ytdrop
     env: node
-    buildCommand: apt-get update && apt-get install -y python3 python3-pip ffmpeg && pip3 install yt-dlp && npm install
+    buildCommand: npm install && python3 -m pip install yt-dlp --user && python3 -m pip install ffmpeg-python --user
     startCommand: node server.js
     envVars:
       - key: PORT
         value: 3000
+      - key: PATH
+        value: /home/render/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
