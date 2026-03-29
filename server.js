@@ -45,20 +45,36 @@ function extractVideoId(url) {
 
 // ── Helper: find yt-dlp binary ────────────────────────────────────────────────
 function getYtDlpBin() {
-  // Try 'which' on Linux/Mac first
+  // Try all possible which/where commands
+  const whichCmds = ["which yt-dlp", "whereis yt-dlp"];
+  for (const cmd of whichCmds) {
+    try {
+      const result = execSync(cmd, { encoding: "utf8" }).trim().split(" ")[0];
+      if (result && result.includes("yt-dlp")) {
+        console.log(`[bin] Found yt-dlp via '${cmd}': ${result}`);
+        return result;
+      }
+    } catch (_) {}
+  }
+
+  // Try python3 -m yt_dlp as fallback
   try {
-    const result = execSync("which yt-dlp", { encoding: "utf8" }).trim();
-    if (result) {
-      console.log(`[bin] Found yt-dlp at: ${result}`);
-      return result;
-    }
+    execSync("python3 -m yt_dlp --version", { encoding: "utf8" });
+    console.log("[bin] Using python3 -m yt_dlp");
+    // Create a wrapper script
+    const wrapperPath = "/tmp/yt-dlp-wrapper.sh";
+    fs.writeFileSync(wrapperPath, "#!/bin/sh\npython3 -m yt_dlp \"$@\"\n");
+    execSync(`chmod +x ${wrapperPath}`);
+    return wrapperPath;
   } catch (_) {}
 
-  // Common Linux/Nix/Windows paths
+  // Common paths including Render's pip --user install location
   const candidates = [
+    "/home/render/.local/bin/yt-dlp",
     "/usr/bin/yt-dlp",
     "/usr/local/bin/yt-dlp",
     "/nix/var/nix/profiles/default/bin/yt-dlp",
+    "/root/.local/bin/yt-dlp",
     "/root/.nix-profile/bin/yt-dlp",
     "yt-dlp",
     "yt-dlp.exe",
