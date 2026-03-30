@@ -34,7 +34,7 @@ const limiter = rateLimit({
   max: 10000,
   message: { error: "Too many requests, please try again in a moment." },
 });
-app.use("/api/", limiter);
+app.use("/api/convert", limiter);
 
 // ── In-memory job store ──────────────────────────────────────────────────────
 const jobs = {};
