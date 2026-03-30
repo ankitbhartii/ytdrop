@@ -148,13 +148,14 @@ app.get("/api/info", (req, res) => {
 
   const cookiesArgs = getCookiesArgs();
   const proc = spawn(YT_DLP_BIN, [
-    "--dump-json",
-    "--no-playlist",
-    "--no-warnings",
-    "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    ...cookiesArgs,
-    ytUrl,
-  ]);
+  "--dump-json",
+  "--no-playlist",
+  "--no-warnings",
+  "--js-runtime", "node",   // ⭐ ADD THIS
+  "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)...",
+  ...cookiesArgs,
+  ytUrl,
+]);
   let stdout = "";
   let stderr = "";
 
@@ -207,12 +208,13 @@ app.post("/api/convert", (req, res) => {
 
   const cookiesArgs = getCookiesArgs();
   const commonArgs = [
-    "--no-playlist",
-    "--no-warnings",
-    "--newline",
-    "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    ...cookiesArgs,
-  ];
+  "--no-playlist",
+  "--no-warnings",
+  "--newline",
+  "--js-runtime", "node",   // ⭐ ADD HERE ALSO
+  "--user-agent", "...",
+  ...cookiesArgs,
+];
 
   if (format === "mp3") {
     args = [
