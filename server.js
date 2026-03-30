@@ -9,6 +9,17 @@ const rateLimit = require("express-rate-limit");
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DOWNLOADS_DIR = path.join(__dirname, "downloads");
+const COOKIES_FILE = path.join(__dirname, "cookies.txt");
+
+// ── Helper: check if cookies file exists ─────────────────────────────────────
+function getCookiesArgs() {
+  if (fs.existsSync(COOKIES_FILE)) {
+    console.log("[cookies] Using cookies.txt for authentication");
+    return ["--cookies", COOKIES_FILE];
+  }
+  console.log("[cookies] No cookies.txt found - running without auth");
+  return [];
+}
 
 // ── Ensure downloads dir exists ──────────────────────────────────────────────
 if (!fs.existsSync(DOWNLOADS_DIR)) fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
@@ -135,7 +146,15 @@ app.get("/api/info", (req, res) => {
   console.log(`[info] Fetching: ${ytUrl}`);
   console.log(`[info] Using binary: ${YT_DLP_BIN}`);
 
-  const proc = spawn(YT_DLP_BIN, ["--dump-json", "--no-playlist", "--no-warnings", ytUrl]);
+  const cookiesArgs = getCookiesArgs();
+  const proc = spawn(YT_DLP_BIN, [
+    "--dump-json",
+    "--no-playlist",
+    "--no-warnings",
+    "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    ...cookiesArgs,
+    ytUrl,
+  ]);
   let stdout = "";
   let stderr = "";
 
@@ -186,14 +205,21 @@ app.post("/api/convert", (req, res) => {
 
   let args;
 
+  const cookiesArgs = getCookiesArgs();
+  const commonArgs = [
+    "--no-playlist",
+    "--no-warnings",
+    "--newline",
+    "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    ...cookiesArgs,
+  ];
+
   if (format === "mp3") {
     args = [
       "-x",
       "--audio-format", "mp3",
       "--audio-quality", "0",
-      "--no-playlist",
-      "--no-warnings",
-      "--newline",
+      ...commonArgs,
       "-o", outputTemplate,
       ytUrl,
     ];
@@ -203,10 +229,8 @@ app.post("/api/convert", (req, res) => {
     args = [
       "-f", `bestvideo[vcodec^=avc][height<=${height}]+bestaudio[ext=m4a]/bestvideo[height<=${height}]+bestaudio/best`,
       "--merge-output-format", "mp4",
-      "--no-playlist",
-      "--no-warnings",
-      "--newline",
       "--postprocessor-args", "ffmpeg:-c:v copy -c:a aac -b:a 192k",
+      ...commonArgs,
       "-o", outputTemplate,
       ytUrl,
     ];
@@ -322,6 +346,8 @@ function formatDuration(seconds) {
 }
 
 // ── Start ─────────────────────────────────────────────────────────────────────
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 YTDrop server running on port ${PORT}`);
+app.listen(PORT, () => {
+  console.log(`\n🎵 YTDrop running at http://localhost:${PORT}`);
+  console.log(`📁 Downloads: ${DOWNLOADS_DIR}`);
+  console.log(`🔧 yt-dlp binary: ${YT_DLP_BIN}\n`);
 });
