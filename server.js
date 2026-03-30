@@ -31,7 +31,7 @@ app.use(express.static(path.join(__dirname, "public")));
 
 const limiter = rateLimit({
   windowMs: 1 * 60 * 1000,
-  max: 200,
+  max: 10000,
   message: { error: "Too many requests, please try again in a moment." },
 });
 app.use("/api/", limiter);
